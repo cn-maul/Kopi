@@ -1,0 +1,361 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>Archive Drop</title>
+  <style>
+    @import url('https://fonts.googleapis.com/css2?family=Noto+Sans+SC:wght@400;500;700&family=ZCOOL+XiaoWei&display=swap');
+
+    :root {
+      --bg: #f4f2ea;
+      --ink: #1f2c30;
+      --muted: #586970;
+      --panel: rgba(255, 255, 255, 0.8);
+      --line: rgba(31, 44, 48, 0.18);
+      --accent: #0f766e;
+      --accent-2: #b45309;
+      --danger: #b42318;
+    }
+
+    * { box-sizing: border-box; }
+
+    body {
+      margin: 0;
+      min-height: 100vh;
+      font-family: "Noto Sans SC", sans-serif;
+      color: var(--ink);
+      background:
+        radial-gradient(1200px 500px at -10% -20%, rgba(15, 118, 110, 0.16), transparent 55%),
+        radial-gradient(900px 500px at 110% 0%, rgba(180, 83, 9, 0.14), transparent 58%),
+        var(--bg);
+    }
+
+    .frame {
+      max-width: 980px;
+      margin: 28px auto;
+      padding: 0 16px;
+      display: grid;
+      gap: 14px;
+    }
+
+    .toolbar {
+      display: flex;
+      justify-content: flex-end;
+    }
+
+    .settings-link {
+      width: 42px;
+      height: 42px;
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      border: 1px solid var(--line);
+      border-radius: 12px;
+      color: var(--ink);
+      text-decoration: none;
+      background: rgba(255, 255, 255, 0.65);
+      backdrop-filter: blur(6px);
+      transition: transform .2s ease, border-color .2s ease;
+    }
+
+    .settings-link:hover {
+      transform: translateY(-1px);
+      border-color: rgba(15, 118, 110, 0.65);
+    }
+
+    .settings-link svg {
+      width: 18px;
+      height: 18px;
+      fill: currentColor;
+    }
+
+    .panel {
+      border: 1px solid var(--line);
+      border-radius: 18px;
+      background: var(--panel);
+      backdrop-filter: blur(10px);
+      box-shadow: 0 14px 40px rgba(17, 24, 39, 0.08);
+      padding: 18px;
+    }
+
+    .title {
+      font-family: "ZCOOL XiaoWei", serif;
+      font-size: 28px;
+      letter-spacing: 1px;
+      margin: 0 0 6px;
+    }
+
+    .meta {
+      margin: 0;
+      color: var(--muted);
+      font-size: 13px;
+    }
+
+    .dropzone {
+      margin-top: 14px;
+      border: 2px dashed rgba(15, 118, 110, 0.45);
+      border-radius: 14px;
+      padding: 28px 20px;
+      text-align: center;
+      background: linear-gradient(180deg, rgba(15, 118, 110, 0.08), rgba(15, 118, 110, 0.02));
+      transition: transform .2s ease, border-color .2s ease, background .2s ease;
+      cursor: pointer;
+    }
+
+    .dropzone.dragover {
+      transform: translateY(-1px);
+      border-color: var(--accent-2);
+      background: linear-gradient(180deg, rgba(180, 83, 9, 0.14), rgba(180, 83, 9, 0.05));
+    }
+
+    .file-name {
+      margin-top: 6px;
+      font-size: 13px;
+      color: var(--muted);
+      word-break: break-all;
+    }
+
+    .grid {
+      margin-top: 14px;
+      display: grid;
+      gap: 12px;
+      grid-template-columns: repeat(2, minmax(0, 1fr));
+    }
+
+    label {
+      display: block;
+      margin-bottom: 6px;
+      font-size: 12px;
+      color: var(--muted);
+    }
+
+    select {
+      width: 100%;
+      border: 1px solid var(--line);
+      border-radius: 11px;
+      padding: 10px 12px;
+      font-size: 14px;
+      background: #fff;
+      color: var(--ink);
+    }
+
+    .switch {
+      margin-top: 8px;
+      display: inline-flex;
+      align-items: center;
+      gap: 8px;
+      font-size: 14px;
+    }
+
+    .hint {
+      margin-top: 5px;
+      font-size: 12px;
+      color: var(--muted);
+    }
+
+    .actions {
+      margin-top: 14px;
+      display: flex;
+      gap: 8px;
+      flex-wrap: wrap;
+    }
+
+    .btn {
+      border: 0;
+      border-radius: 11px;
+      padding: 10px 14px;
+      font-size: 14px;
+      cursor: pointer;
+      color: white;
+      background: linear-gradient(120deg, #0f766e, #0f5f76);
+      box-shadow: 0 8px 20px rgba(15, 118, 110, 0.24);
+    }
+
+    .status {
+      margin-top: 12px;
+      border: 1px solid var(--line);
+      border-radius: 12px;
+      padding: 10px 12px;
+      font-size: 13px;
+      color: var(--ink);
+      background: rgba(255, 255, 255, 0.7);
+      white-space: pre-wrap;
+    }
+
+    .status.error {
+      border-color: rgba(180, 35, 24, 0.35);
+      color: var(--danger);
+      background: #fff4f3;
+    }
+
+    @media (max-width: 720px) {
+      .grid { grid-template-columns: 1fr; }
+      .title { font-size: 24px; }
+    }
+  </style>
+</head>
+<body>
+  <main class="frame">
+    <div class="toolbar">
+      <a class="settings-link" href="/settings" title="设置" aria-label="设置">
+        <svg viewBox="0 0 24 24" aria-hidden="true">
+          <path d="M19.14 12.94c.04-.31.06-.63.06-.94s-.02-.63-.06-.94l2.03-1.58a.5.5 0 0 0 .12-.64l-1.92-3.32a.5.5 0 0 0-.6-.22l-2.39.96a7.14 7.14 0 0 0-1.63-.94L14.4 2.8a.5.5 0 0 0-.49-.4h-3.82a.5.5 0 0 0-.49.4l-.36 2.52c-.58.23-1.12.54-1.63.94l-2.39-.96a.5.5 0 0 0-.6.22L2.7 8.84a.5.5 0 0 0 .12.64l2.03 1.58c-.04.31-.06.63-.06.94s.02.63.06.94L2.82 14.52a.5.5 0 0 0-.12.64l1.92 3.32c.13.22.39.31.6.22l2.39-.96c.5.4 1.05.72 1.63.94l.36 2.52c.04.24.25.4.49.4h3.82c.24 0 .45-.16.49-.4l.36-2.52c.58-.23 1.12-.54 1.63-.94l2.39.96c.22.09.47 0 .6-.22l1.92-3.32a.5.5 0 0 0-.12-.64l-2.03-1.58ZM12 15.6a3.6 3.6 0 1 1 0-7.2 3.6 3.6 0 0 1 0 7.2Z"/>
+        </svg>
+      </a>
+    </div>
+
+    <section class="panel">
+      <h1 class="title">文件归档</h1>
+      <p class="meta">拖拽上传后即可归档，版本会自动递增。</p>
+
+      <div id="dropzone" class="dropzone">
+        <div>拖拽文件到这里，或点击选择文件</div>
+        <div id="fileName" class="file-name">未选择文件</div>
+        <input id="fileInput" type="file" multiple style="display:none" />
+      </div>
+
+      <div class="grid">
+        <div>
+          <label for="category">分类</label>
+          <select id="category"></select>
+        </div>
+      </div>
+
+      <label class="switch">
+        <input id="useAI" type="checkbox" />
+        使用 AI 根据文件名自动判断分类
+      </label>
+      <div id="aiHint" class="hint">未配置 AI，需手动选择分类。</div>
+
+      <div class="actions">
+        <button id="archiveBtn" class="btn">开始归档</button>
+      </div>
+
+      <div id="archiveStatus" class="status">等待操作</div>
+    </section>
+  </main>
+
+  <script>
+    const fileInput = document.getElementById('fileInput');
+    const fileName = document.getElementById('fileName');
+    const dropzone = document.getElementById('dropzone');
+    const categorySelect = document.getElementById('category');
+    const archiveStatus = document.getElementById('archiveStatus');
+    const useAIInput = document.getElementById('useAI');
+    const aiHint = document.getElementById('aiHint');
+    let selectedFiles = [];
+
+    function setStatus(el, msg, isError = false) {
+      el.textContent = msg;
+      el.classList.toggle('error', isError);
+    }
+
+    function fillCategoryOptions(map) {
+      const keys = Object.keys(map || {});
+      categorySelect.innerHTML = '';
+      for (const key of keys) {
+        const opt = document.createElement('option');
+        opt.value = key;
+        opt.textContent = `${key} (${map[key]})`;
+        categorySelect.appendChild(opt);
+      }
+    }
+
+    function refreshAIState(ai) {
+      const ok = !!(ai && ai.url && ai.apiKey && ai.modelName);
+      useAIInput.disabled = !ok;
+      if (!ok) {
+        useAIInput.checked = false;
+        aiHint.textContent = '未配置 AI，需手动选择分类。';
+      } else {
+        aiHint.textContent = '已配置 AI，可选择自动分类。';
+      }
+    }
+
+    async function loadConfig() {
+      try {
+        const res = await fetch('/api/config');
+        const data = await res.json();
+        if (!res.ok) throw new Error(data.error || '加载失败');
+        fillCategoryOptions(data.categories);
+        refreshAIState(data.ai);
+      } catch (e) {
+        setStatus(archiveStatus, e.message, true);
+      }
+    }
+
+    async function archiveFile() {
+      if (selectedFiles.length === 0) {
+        setStatus(archiveStatus, '请先选择一个文件', true);
+        return;
+      }
+      const category = categorySelect.value;
+      if (!useAIInput.checked && !category) {
+        setStatus(archiveStatus, '请先配置并选择分类', true);
+        return;
+      }
+
+      const form = new FormData();
+      for (const f of selectedFiles) form.append('file', f);
+      form.append('category', category);
+      form.append('useAI', useAIInput.checked ? 'true' : 'false');
+
+      setStatus(archiveStatus, '归档处理中...');
+      try {
+        const res = await fetch('/api/archive', { method: 'POST', body: form });
+        const data = await res.json();
+        if (!res.ok) throw new Error(data.error || '归档失败');
+        let msg = data.message || '归档成功';
+        if (Array.isArray(data.results)) {
+          const failCount = data.results.filter(r => r.status !== 'success').length;
+          if (failCount > 0) {
+            const brief = data.results.filter(r => r.status !== 'success').slice(0, 3).map(r => `${r.filename}: ${r.error}`).join('\n');
+            msg += `\n失败 ${failCount} 个\n${brief}`;
+          }
+        }
+        setStatus(archiveStatus, msg);
+      } catch (e) {
+        setStatus(archiveStatus, e.message, true);
+      }
+    }
+
+    function updateSelectedFiles(files) {
+      selectedFiles = Array.from(files || []);
+      if (selectedFiles.length === 0) {
+        fileName.textContent = '未选择文件';
+        return;
+      }
+      if (selectedFiles.length === 1) {
+        fileName.textContent = selectedFiles[0].name;
+      } else {
+        const names = selectedFiles.slice(0, 3).map(f => f.name).join('，');
+        const more = selectedFiles.length > 3 ? ` 等 ${selectedFiles.length} 个文件` : `（共 ${selectedFiles.length} 个）`;
+        fileName.textContent = `${names}${more}`;
+      }
+    }
+
+    dropzone.addEventListener('click', () => fileInput.click());
+    fileInput.addEventListener('change', () => updateSelectedFiles(fileInput.files));
+
+    dropzone.addEventListener('dragover', (e) => {
+      e.preventDefault();
+      dropzone.classList.add('dragover');
+    });
+    dropzone.addEventListener('dragleave', () => {
+      dropzone.classList.remove('dragover');
+    });
+    dropzone.addEventListener('drop', (e) => {
+      e.preventDefault();
+      dropzone.classList.remove('dragover');
+      if (e.dataTransfer.files && e.dataTransfer.files.length > 0) {
+        updateSelectedFiles(e.dataTransfer.files);
+      }
+    });
+
+    document.getElementById('archiveBtn').addEventListener('click', archiveFile);
+
+    loadConfig();
+  </script>
+</body>
+</html>

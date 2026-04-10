@@ -1,0 +1,10 @@
+archiveBaseDir: archive
+templatePrefix: '{category_abbr}-{yyyymmdd}-{filename}'
+categories:
+  开发: DEV
+  教学: EDU
+  财务: FIN
+ai:
+  url: ''
+  apiKey: ''
+  modelName: ''

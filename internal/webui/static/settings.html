@@ -1,0 +1,438 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>Archive Settings</title>
+  <style>
+    @import url('https://fonts.googleapis.com/css2?family=Noto+Sans+SC:wght@400;500;700&family=ZCOOL+XiaoWei&display=swap');
+
+    :root {
+      --bg: #f4f2ea;
+      --ink: #1f2c30;
+      --muted: #586970;
+      --panel: rgba(255, 255, 255, 0.82);
+      --line: rgba(31, 44, 48, 0.18);
+      --accent: #0f766e;
+      --accent-2: #b45309;
+      --danger: #b42318;
+    }
+
+    * { box-sizing: border-box; }
+
+    body {
+      margin: 0;
+      min-height: 100vh;
+      font-family: "Noto Sans SC", sans-serif;
+      color: var(--ink);
+      background:
+        radial-gradient(1200px 500px at -10% -20%, rgba(15, 118, 110, 0.16), transparent 55%),
+        radial-gradient(900px 500px at 110% 0%, rgba(180, 83, 9, 0.14), transparent 58%),
+        var(--bg);
+    }
+
+    .frame {
+      max-width: 1080px;
+      margin: 28px auto;
+      padding: 0 16px;
+      display: grid;
+      gap: 14px;
+    }
+
+    .toolbar {
+      display: flex;
+      justify-content: flex-start;
+    }
+
+    .back-link {
+      width: 42px;
+      height: 42px;
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      border: 1px solid var(--line);
+      border-radius: 12px;
+      color: var(--ink);
+      text-decoration: none;
+      background: rgba(255, 255, 255, 0.65);
+      backdrop-filter: blur(6px);
+      transition: transform .2s ease, border-color .2s ease;
+    }
+
+    .back-link:hover {
+      transform: translateY(-1px);
+      border-color: rgba(15, 118, 110, 0.65);
+    }
+
+    .back-link svg {
+      width: 18px;
+      height: 18px;
+      fill: currentColor;
+    }
+
+    .layout {
+      display: grid;
+      gap: 14px;
+      grid-template-columns: 1.2fr 1fr;
+    }
+
+    .panel {
+      border: 1px solid var(--line);
+      border-radius: 18px;
+      background: var(--panel);
+      backdrop-filter: blur(10px);
+      box-shadow: 0 14px 40px rgba(17, 24, 39, 0.08);
+      padding: 18px;
+    }
+
+    .title {
+      margin: 0 0 10px;
+      font-family: "ZCOOL XiaoWei", serif;
+      font-size: 24px;
+      letter-spacing: 1px;
+    }
+
+    .grid {
+      display: grid;
+      gap: 12px;
+      grid-template-columns: repeat(2, minmax(0, 1fr));
+    }
+
+    label {
+      display: block;
+      margin-bottom: 6px;
+      font-size: 12px;
+      color: var(--muted);
+    }
+
+    input[type="text"] {
+      width: 100%;
+      border: 1px solid var(--line);
+      border-radius: 11px;
+      padding: 10px 12px;
+      font-size: 14px;
+      background: #fff;
+      color: var(--ink);
+    }
+
+    .path-row {
+      display: grid;
+      gap: 8px;
+      grid-template-columns: 1fr auto;
+      align-items: center;
+    }
+
+    .absolute-path {
+      margin-top: 6px;
+      font-size: 12px;
+      color: var(--muted);
+      word-break: break-all;
+    }
+
+    .category-list {
+      display: grid;
+      gap: 8px;
+      margin-top: 8px;
+    }
+
+    .category-row {
+      display: grid;
+      grid-template-columns: 1fr 1fr auto;
+      gap: 8px;
+      align-items: center;
+    }
+
+    .actions {
+      margin-top: 14px;
+      display: flex;
+      gap: 8px;
+      flex-wrap: wrap;
+    }
+
+    .btn {
+      border: 0;
+      border-radius: 11px;
+      padding: 10px 14px;
+      font-size: 14px;
+      cursor: pointer;
+      color: #0f172a;
+      background: #e2e8f0;
+    }
+
+    .btn.primary {
+      color: white;
+      background: linear-gradient(120deg, #0f766e, #0f5f76);
+      box-shadow: 0 8px 20px rgba(15, 118, 110, 0.24);
+    }
+
+    .btn.danger {
+      color: #7f1d1d;
+      background: #fee2e2;
+    }
+
+    .status {
+      margin-top: 12px;
+      border: 1px solid var(--line);
+      border-radius: 12px;
+      padding: 10px 12px;
+      font-size: 13px;
+      color: var(--ink);
+      background: rgba(255, 255, 255, 0.72);
+      white-space: pre-wrap;
+      grid-column: 1 / -1;
+    }
+
+    .status.error {
+      border-color: rgba(180, 35, 24, 0.35);
+      color: var(--danger);
+      background: #fff4f3;
+    }
+
+    @media (max-width: 900px) {
+      .layout { grid-template-columns: 1fr; }
+    }
+
+    @media (max-width: 720px) {
+      .grid { grid-template-columns: 1fr; }
+      .category-row { grid-template-columns: 1fr; }
+      .path-row { grid-template-columns: 1fr; }
+    }
+  </style>
+</head>
+<body>
+  <main class="frame">
+    <div class="toolbar">
+      <a class="back-link" href="/" title="返回上传页面" aria-label="返回上传页面">
+        <svg viewBox="0 0 24 24" aria-hidden="true">
+          <path d="M10.83 19.59 4.24 13a1.4 1.4 0 0 1 0-1.98l6.59-6.59a1 1 0 1 1 1.42 1.42L7.66 10.4H19a1 1 0 1 1 0 2H7.66l4.59 4.59a1 1 0 0 1-1.42 1.42Z"/>
+        </svg>
+      </a>
+    </div>
+
+    <section class="layout">
+      <div class="panel">
+        <h2 class="title">程序配置</h2>
+
+        <div class="grid">
+          <div>
+            <label for="archiveBaseDir">归档根目录</label>
+            <div class="path-row">
+              <input id="archiveBaseDir" type="text" placeholder="例如: /home/user/archive" />
+              <button id="pickArchiveDirBtn" type="button" class="btn">选择目录</button>
+            </div>
+            <div id="archiveAbsPath" class="absolute-path">绝对路径: -</div>
+          </div>
+          <div>
+            <label for="templatePrefix">前缀模板</label>
+            <input id="templatePrefix" type="text" placeholder="{category_abbr}-{yyyymmdd}-{filename}" />
+          </div>
+        </div>
+
+        <div style="margin-top: 12px;">
+          <label>分类映射</label>
+          <div id="categoriesList" class="category-list"></div>
+          <div class="actions" style="margin-top: 8px;">
+            <button id="addCategoryBtn" type="button" class="btn">新增分类</button>
+          </div>
+        </div>
+
+        <div class="actions">
+          <button id="reloadConfigBtn" class="btn" type="button">重新加载</button>
+          <button id="saveConfigBtn" class="btn primary" type="button">保存程序配置</button>
+        </div>
+      </div>
+
+      <div class="panel">
+        <h2 class="title">AI 配置</h2>
+
+        <div class="grid">
+          <div>
+            <label for="aiUrl">AI URL (OpenAI 格式)</label>
+            <input id="aiUrl" type="text" placeholder="例如: https://api.openai.com/v1" />
+          </div>
+          <div>
+            <label for="aiModelName">AI Model Name</label>
+            <input id="aiModelName" type="text" placeholder="例如: gpt-4.1-mini" />
+          </div>
+          <div style="grid-column: 1 / -1;">
+            <label for="aiApiKey">AI API Key</label>
+            <input id="aiApiKey" type="text" placeholder="sk-..." />
+          </div>
+        </div>
+
+        <div class="actions">
+          <button id="testAIBtn" class="btn" type="button">测试 AI 配置</button>
+          <button id="saveConfigBtn2" class="btn primary" type="button">保存 AI 配置</button>
+        </div>
+      </div>
+
+      <div id="configStatus" class="status">等待操作</div>
+    </section>
+  </main>
+
+  <script>
+    const configStatus = document.getElementById('configStatus');
+    const archiveBaseDirInput = document.getElementById('archiveBaseDir');
+    const archiveAbsPath = document.getElementById('archiveAbsPath');
+    const templatePrefixInput = document.getElementById('templatePrefix');
+    const categoriesList = document.getElementById('categoriesList');
+    const aiUrlInput = document.getElementById('aiUrl');
+    const aiModelNameInput = document.getElementById('aiModelName');
+    const aiApiKeyInput = document.getElementById('aiApiKey');
+
+    function setStatus(el, msg, isError = false) {
+      el.textContent = msg;
+      el.classList.toggle('error', isError);
+    }
+
+    function createCategoryRow(name = '', abbr = '') {
+      const row = document.createElement('div');
+      row.className = 'category-row';
+      row.innerHTML = `
+        <input type="text" class="cat-name" placeholder="分类中文名" value="${name}" />
+        <input type="text" class="cat-abbr" placeholder="英文缩写" value="${abbr}" />
+        <button type="button" class="btn danger remove-cat">删除</button>
+      `;
+      row.querySelector('.remove-cat').addEventListener('click', () => row.remove());
+      categoriesList.appendChild(row);
+    }
+
+    function loadCategories(map) {
+      categoriesList.innerHTML = '';
+      const entries = Object.entries(map || {});
+      if (entries.length === 0) {
+        createCategoryRow('', '');
+        return;
+      }
+      for (const [name, abbr] of entries) {
+        createCategoryRow(name, abbr);
+      }
+    }
+
+    function collectCategories() {
+      const map = {};
+      const rows = categoriesList.querySelectorAll('.category-row');
+      for (const row of rows) {
+        const name = row.querySelector('.cat-name').value.trim();
+        const abbr = row.querySelector('.cat-abbr').value.trim();
+        if (!name && !abbr) continue;
+        if (!name || !abbr) throw new Error('分类映射每一行都需要同时填写分类名和缩写');
+        map[name] = abbr;
+      }
+      if (Object.keys(map).length === 0) throw new Error('分类映射不能为空');
+      return map;
+    }
+
+    async function resolveArchiveAbsolutePath() {
+      const p = archiveBaseDirInput.value.trim();
+      if (!p) {
+        archiveAbsPath.textContent = '绝对路径: -';
+        return;
+      }
+      try {
+        const res = await fetch(`/api/path/resolve?path=${encodeURIComponent(p)}`);
+        const data = await res.json();
+        if (!res.ok) throw new Error(data.error || '路径解析失败');
+        archiveAbsPath.textContent = `绝对路径: ${data.absolutePath || '-'}`;
+      } catch (e) {
+        archiveAbsPath.textContent = '绝对路径: 解析失败';
+      }
+    }
+
+    async function loadConfig() {
+      setStatus(configStatus, '加载配置中...');
+      try {
+        const res = await fetch('/api/config');
+        const data = await res.json();
+        if (!res.ok) throw new Error(data.error || '加载失败');
+        archiveBaseDirInput.value = data.archiveBaseDir || 'archive';
+        templatePrefixInput.value = data.templatePrefix || '{category_abbr}-{yyyymmdd}-{filename}';
+        loadCategories(data.categories);
+        aiUrlInput.value = (data.ai && data.ai.url) || '';
+        aiApiKeyInput.value = (data.ai && data.ai.apiKey) || '';
+        aiModelNameInput.value = (data.ai && data.ai.modelName) || '';
+        await resolveArchiveAbsolutePath();
+        setStatus(configStatus, '配置已加载');
+      } catch (e) {
+        setStatus(configStatus, e.message, true);
+      }
+    }
+
+    async function saveConfig() {
+      try {
+        const payload = {
+          archiveBaseDir: archiveBaseDirInput.value.trim() || 'archive',
+          templatePrefix: templatePrefixInput.value.trim(),
+          categories: collectCategories(),
+          ai: {
+            url: aiUrlInput.value.trim(),
+            apiKey: aiApiKeyInput.value.trim(),
+            modelName: aiModelNameInput.value.trim(),
+          },
+        };
+        setStatus(configStatus, '保存配置中...');
+        const res = await fetch('/api/config', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify(payload),
+        });
+        const data = await res.json();
+        if (!res.ok) throw new Error(data.error || '保存失败');
+        await resolveArchiveAbsolutePath();
+        setStatus(configStatus, data.message || '配置已保存');
+      } catch (e) {
+        setStatus(configStatus, e.message, true);
+      }
+    }
+
+    async function testAIConfig() {
+      try {
+        const payload = {
+          url: aiUrlInput.value.trim(),
+          apiKey: aiApiKeyInput.value.trim(),
+          modelName: aiModelNameInput.value.trim(),
+        };
+        setStatus(configStatus, '测试 AI 连通中...');
+        const res = await fetch('/api/ai/test', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify(payload),
+        });
+        const data = await res.json();
+        if (!res.ok) throw new Error(data.error || '测试失败');
+        const msg = data.reply ? `${data.message}\n模型回复: ${data.reply}` : (data.message || '测试成功');
+        setStatus(configStatus, msg);
+      } catch (e) {
+        setStatus(configStatus, e.message, true);
+      }
+    }
+
+    async function pickArchiveDir() {
+      try {
+        if (!window.showDirectoryPicker) {
+          setStatus(configStatus, '当前浏览器不支持目录选择，请手动填写路径', true);
+          return;
+        }
+        const handle = await window.showDirectoryPicker();
+        if (handle && handle.name) {
+          archiveBaseDirInput.value = handle.name;
+          await resolveArchiveAbsolutePath();
+        }
+      } catch (e) {
+        if (e && e.name === 'AbortError') return;
+        setStatus(configStatus, '选择目录失败，请手动填写路径', true);
+      }
+    }
+
+    document.getElementById('reloadConfigBtn').addEventListener('click', loadConfig);
+    document.getElementById('addCategoryBtn').addEventListener('click', () => createCategoryRow('', ''));
+    document.getElementById('pickArchiveDirBtn').addEventListener('click', pickArchiveDir);
+    document.getElementById('testAIBtn').addEventListener('click', testAIConfig);
+    document.getElementById('saveConfigBtn').addEventListener('click', saveConfig);
+    document.getElementById('saveConfigBtn2').addEventListener('click', saveConfig);
+    archiveBaseDirInput.addEventListener('input', resolveArchiveAbsolutePath);
+
+    loadConfig();
+  </script>
+</body>
+</html>
