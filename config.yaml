@@ -1,10 +1,9 @@
 archiveBaseDir: archive
-templatePrefix: '{category_abbr}-{yyyymmdd}-{filename}'
 categories:
-  开发: DEV
-  教学: EDU
-  财务: FIN
+    开发: DEV
+    测试: TEST
+templatePrefix: '{category_abbr}-{yyyymmdd}-{filename}'
 ai:
-  url: ''
-  apiKey: ''
-  modelName: ''
+    url: ""
+    apiKey: ""
+    modelName: ""

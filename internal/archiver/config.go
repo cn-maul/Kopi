@@ -32,6 +32,17 @@ var defaultConfig = Config{
 	},
 }
 
+func cloneCategories(src map[string]string) map[string]string {
+	if len(src) == 0 {
+		return map[string]string{}
+	}
+	dst := make(map[string]string, len(src))
+	for k, v := range src {
+		dst[k] = v
+	}
+	return dst
+}
+
 func loadConfig(configPath string) (*Config, error) {
 	if configPath == "" {
 		configPath = "config.yaml"
@@ -45,6 +56,7 @@ func loadConfig(configPath string) (*Config, error) {
 				return nil, err
 			}
 			cfg := defaultConfig
+			cfg.Categories = cloneCategories(defaultConfig.Categories)
 			return &cfg, nil
 		}
 		return nil, fmt.Errorf("读取配置文件失败: %w", err)
@@ -59,7 +71,7 @@ func loadConfig(configPath string) (*Config, error) {
 		cfg.ArchiveBaseDir = defaultConfig.ArchiveBaseDir
 	}
 	if len(cfg.Categories) == 0 {
-		cfg.Categories = defaultConfig.Categories
+		cfg.Categories = cloneCategories(defaultConfig.Categories)
 	}
 	if strings.TrimSpace(cfg.TemplatePrefix) == "" {
 		cfg.TemplatePrefix = defaultConfig.TemplatePrefix
@@ -86,7 +98,7 @@ func SaveConfig(configPath string, cfg *Config) error {
 		cfg.ArchiveBaseDir = defaultConfig.ArchiveBaseDir
 	}
 	if len(cfg.Categories) == 0 {
-		cfg.Categories = defaultConfig.Categories
+		cfg.Categories = cloneCategories(defaultConfig.Categories)
 	}
 	if strings.TrimSpace(cfg.TemplatePrefix) == "" {
 		cfg.TemplatePrefix = defaultConfig.TemplatePrefix

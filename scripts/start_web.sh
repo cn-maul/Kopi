@@ -4,7 +4,7 @@ set -euo pipefail
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 ROOT_DIR="$(cd "$SCRIPT_DIR/.." && pwd)"
 
-ADDR="${1:-:8080}"
+ADDR="${1:-:8082}"
 CONFIG_PATH="${2:-}"
 
 "$SCRIPT_DIR/build.sh"

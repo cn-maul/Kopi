@@ -1,6 +1,7 @@
 package archiver
 
 import (
+	"errors"
 	"fmt"
 	"io"
 	"os"
@@ -15,6 +16,13 @@ func Run(filePath, category, tmpl, configPath string) error {
 	cfg, err := loadConfig(configPath)
 	if err != nil {
 		return err
+	}
+	return RunWithConfig(filePath, category, tmpl, cfg)
+}
+
+func RunWithConfig(filePath, category, tmpl string, cfg *Config) error {
+	if cfg == nil {
+		return fmt.Errorf("配置为空")
 	}
 
 	cleanPath := filepath.Clean(filePath)
@@ -54,13 +62,19 @@ func Run(filePath, category, tmpl, configPath string) error {
 		return err
 	}
 
-	renderedName := fmt.Sprintf("%s-v%d%s", renderedPrefix, version, ext)
-	destinationPath := filepath.Join(targetDir, renderedName)
-	if err := copyFile(cleanPath, destinationPath); err != nil {
+	for {
+		renderedName := fmt.Sprintf("%s-v%d%s", renderedPrefix, version, ext)
+		destinationPath := filepath.Join(targetDir, renderedName)
+		err := copyFileExclusive(cleanPath, destinationPath)
+		if err == nil {
+			return nil
+		}
+		if errors.Is(err, os.ErrExist) {
+			version++
+			continue
+		}
 		return err
 	}
-
-	return nil
 }
 
 func getNextVersion(targetDir, renderedPrefix, ext string) (int, error) {
@@ -94,25 +108,32 @@ func getNextVersion(targetDir, renderedPrefix, ext string) (int, error) {
 	return maxVersion + 1, nil
 }
 
-func copyFile(src, dst string) error {
+func copyFileExclusive(src, dst string) error {
 	sourceFile, err := os.Open(src)
 	if err != nil {
 		return fmt.Errorf("打开源文件失败: %w", err)
 	}
 	defer sourceFile.Close()
 
-	destinationFile, err := os.Create(dst)
+	destinationFile, err := os.OpenFile(dst, os.O_WRONLY|os.O_CREATE|os.O_EXCL, 0o644)
 	if err != nil {
 		return fmt.Errorf("创建目标文件失败: %w", err)
 	}
-	defer destinationFile.Close()
 
 	if _, err := io.Copy(destinationFile, sourceFile); err != nil {
+		_ = destinationFile.Close()
+		_ = os.Remove(dst)
 		return fmt.Errorf("复制文件失败: %w", err)
 	}
 
 	if err := destinationFile.Sync(); err != nil {
+		_ = destinationFile.Close()
+		_ = os.Remove(dst)
 		return fmt.Errorf("刷新目标文件失败: %w", err)
+	}
+	if err := destinationFile.Close(); err != nil {
+		_ = os.Remove(dst)
+		return fmt.Errorf("关闭目标文件失败: %w", err)
 	}
 
 	return nil

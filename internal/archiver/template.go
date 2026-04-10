@@ -12,7 +12,20 @@ type TemplateValues struct {
 	Filename     string
 }
 
+var (
+	knownPlaceholderReplacer = strings.NewReplacer(
+		"{category_abbr}", "",
+		"{yyyymmdd}", "",
+		"{filename}", "",
+	)
+	unknownPlaceholderPattern = regexp.MustCompile(`\{[^{}]+\}`)
+)
+
 func renderTemplate(tmpl string, values TemplateValues) (string, error) {
+	if containsUnknownPlaceholder(tmpl) {
+		return "", fmt.Errorf("模板包含未识别占位符: %s", tmpl)
+	}
+
 	replacer := strings.NewReplacer(
 		"{category_abbr}", values.CategoryAbbr,
 		"{yyyymmdd}", values.Date,
@@ -20,13 +33,9 @@ func renderTemplate(tmpl string, values TemplateValues) (string, error) {
 	)
 
 	rendered := replacer.Replace(tmpl)
-	if containsUnknownPlaceholder(rendered) {
-		return "", fmt.Errorf("模板包含未识别占位符: %s", tmpl)
-	}
-
 	return rendered, nil
 }
 
 func containsUnknownPlaceholder(value string) bool {
-	return regexp.MustCompile(`\{[^{}]+\}`).MatchString(value)
+	return unknownPlaceholderPattern.MatchString(knownPlaceholderReplacer.Replace(value))
 }

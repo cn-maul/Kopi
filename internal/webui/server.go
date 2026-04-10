@@ -186,7 +186,7 @@ func (s *Server) handleArchive(w http.ResponseWriter, r *http.Request) {
 			}
 		}
 
-		if err := archiver.Run(localPath, chosenCategory, template, s.ConfigPath); err != nil {
+		if err := archiver.RunWithConfig(localPath, chosenCategory, template, cfg); err != nil {
 			results = append(results, itemResult{
 				Filename: safeName,
 				Category: chosenCategory,
