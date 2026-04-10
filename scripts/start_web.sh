@@ -1,10 +1,10 @@
-#!/usr/bin/env bash
+﻿#!/usr/bin/env bash
 set -euo pipefail
 
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 ROOT_DIR="$(cd "$SCRIPT_DIR/.." && pwd)"
 
-ADDR="${1:-:8082}"
+ADDR="${1:-:8080}"
 CONFIG_PATH="${2:-}"
 
 "$SCRIPT_DIR/build.sh"
@@ -16,3 +16,4 @@ if [[ -n "$CONFIG_PATH" ]]; then
 else
   exec ./archiver -web -addr "$ADDR"
 fi
+

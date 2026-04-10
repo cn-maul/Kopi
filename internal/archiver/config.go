@@ -1,4 +1,4 @@
-package archiver
+﻿package archiver
 
 import (
 	"fmt"
@@ -43,30 +43,13 @@ func cloneCategories(src map[string]string) map[string]string {
 	return dst
 }
 
-func loadConfig(configPath string) (*Config, error) {
-	if configPath == "" {
-		configPath = "config.yaml"
-	}
+func cloneDefaultConfig() *Config {
+	cfg := defaultConfig
+	cfg.Categories = cloneCategories(defaultConfig.Categories)
+	return &cfg
+}
 
-	cleanPath := filepath.Clean(configPath)
-	data, err := os.ReadFile(cleanPath)
-	if err != nil {
-		if os.IsNotExist(err) {
-			if err := writeDefaultConfigFile(cleanPath); err != nil {
-				return nil, err
-			}
-			cfg := defaultConfig
-			cfg.Categories = cloneCategories(defaultConfig.Categories)
-			return &cfg, nil
-		}
-		return nil, fmt.Errorf("读取配置文件失败: %w", err)
-	}
-
-	var cfg Config
-	if err := yaml.Unmarshal(data, &cfg); err != nil {
-		return nil, fmt.Errorf("解析配置文件失败: %w", err)
-	}
-
+func normalizeConfigDefaults(cfg *Config) {
 	if cfg.ArchiveBaseDir == "" {
 		cfg.ArchiveBaseDir = defaultConfig.ArchiveBaseDir
 	}
@@ -76,7 +59,27 @@ func loadConfig(configPath string) (*Config, error) {
 	if strings.TrimSpace(cfg.TemplatePrefix) == "" {
 		cfg.TemplatePrefix = defaultConfig.TemplatePrefix
 	}
+}
 
+func loadConfig(configPath string) (*Config, error) {
+	if configPath == "" {
+		configPath = "config.yaml"
+	}
+
+	cleanPath := filepath.Clean(configPath)
+	data, err := os.ReadFile(cleanPath)
+	if err != nil {
+		if os.IsNotExist(err) {
+			return cloneDefaultConfig(), nil
+		}
+		return nil, fmt.Errorf("读取配置文件失败: %w", err)
+	}
+
+	var cfg Config
+	if err := yaml.Unmarshal(data, &cfg); err != nil {
+		return nil, fmt.Errorf("解析配置文件失败: %w", err)
+	}
+	normalizeConfigDefaults(&cfg)
 	return &cfg, nil
 }
 
@@ -94,15 +97,8 @@ func SaveConfig(configPath string, cfg *Config) error {
 	}
 
 	cleanPath := filepath.Clean(configPath)
-	if cfg.ArchiveBaseDir == "" {
-		cfg.ArchiveBaseDir = defaultConfig.ArchiveBaseDir
-	}
-	if len(cfg.Categories) == 0 {
-		cfg.Categories = cloneCategories(defaultConfig.Categories)
-	}
-	if strings.TrimSpace(cfg.TemplatePrefix) == "" {
-		cfg.TemplatePrefix = defaultConfig.TemplatePrefix
-	}
+	normalizeConfigDefaults(cfg)
+
 	aiURLSet := strings.TrimSpace(cfg.AI.URL) != ""
 	aiKeySet := strings.TrimSpace(cfg.AI.APIKey) != ""
 	aiModelSet := strings.TrimSpace(cfg.AI.ModelName) != ""
@@ -113,10 +109,6 @@ func SaveConfig(configPath string, cfg *Config) error {
 	}
 
 	return writeConfigFile(cleanPath, cfg)
-}
-
-func writeDefaultConfigFile(path string) error {
-	return writeConfigFile(path, &defaultConfig)
 }
 
 func writeConfigFile(path string, cfg *Config) error {

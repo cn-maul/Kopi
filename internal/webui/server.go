@@ -2,12 +2,13 @@ package webui
 
 import (
 	"bytes"
+	"compress/gzip"
 	"context"
+	"crypto/sha256"
 	"encoding/json"
 	"fmt"
 	"io"
 	"net/http"
-	"os"
 	"path/filepath"
 	"sort"
 	"strings"
@@ -20,6 +21,11 @@ type Server struct {
 	ConfigPath string
 }
 
+var (
+	indexETag    = buildETag(indexHTML)
+	settingsETag = buildETag(settingsHTML)
+)
+
 func (s *Server) Handler() http.Handler {
 	mux := http.NewServeMux()
 	mux.HandleFunc("/", s.handleIndex)
@@ -28,7 +34,7 @@ func (s *Server) Handler() http.Handler {
 	mux.HandleFunc("/api/archive", s.handleArchive)
 	mux.HandleFunc("/api/ai/test", s.handleAITest)
 	mux.HandleFunc("/api/path/resolve", s.handleResolvePath)
-	return mux
+	return gzipMiddleware(mux)
 }
 
 func (s *Server) handleIndex(w http.ResponseWriter, r *http.Request) {
@@ -36,21 +42,11 @@ func (s *Server) handleIndex(w http.ResponseWriter, r *http.Request) {
 		http.NotFound(w, r)
 		return
 	}
-	if r.Method != http.MethodGet {
-		http.Error(w, "method not allowed", http.StatusMethodNotAllowed)
-		return
-	}
-	w.Header().Set("Content-Type", "text/html; charset=utf-8")
-	_, _ = w.Write(indexHTML)
+	serveEmbeddedHTML(w, r, indexHTML, indexETag)
 }
 
 func (s *Server) handleSettings(w http.ResponseWriter, r *http.Request) {
-	if r.Method != http.MethodGet {
-		http.Error(w, "method not allowed", http.StatusMethodNotAllowed)
-		return
-	}
-	w.Header().Set("Content-Type", "text/html; charset=utf-8")
-	_, _ = w.Write(settingsHTML)
+	serveEmbeddedHTML(w, r, settingsHTML, settingsETag)
 }
 
 func (s *Server) handleConfig(w http.ResponseWriter, r *http.Request) {
@@ -84,129 +80,127 @@ func (s *Server) handleArchive(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	if err := r.ParseMultipartForm(64 << 20); err != nil {
-		writeJSONError(w, http.StatusBadRequest, "上传请求无效")
-		return
-	}
-
-	category := strings.TrimSpace(r.FormValue("category"))
-	useAI := strings.EqualFold(strings.TrimSpace(r.FormValue("useAI")), "true")
-	template := strings.TrimSpace(r.FormValue("template"))
-
-	files := r.MultipartForm.File["file"]
-	if len(files) == 0 {
-		writeJSONError(w, http.StatusBadRequest, "未选择文件")
-		return
-	}
-
-	workDir, err := os.MkdirTemp("", "archiver-upload-*")
-	if err != nil {
-		writeJSONError(w, http.StatusInternalServerError, "创建临时目录失败")
-		return
-	}
-	defer os.RemoveAll(workDir)
-
 	cfg, err := archiver.LoadConfig(s.ConfigPath)
 	if err != nil {
 		writeJSONError(w, http.StatusInternalServerError, err.Error())
 		return
 	}
-	if template == "" {
-		template = cfg.TemplatePrefix
-	}
 
-	if useAI && !aiConfigured(cfg.AI) {
-		writeJSONError(w, http.StatusBadRequest, "AI 配置不完整，请先配置 url/apiKey/modelName")
-		return
-	}
-	if !useAI && category == "" {
-		writeJSONError(w, http.StatusBadRequest, "分类不能为空")
+	mr, err := r.MultipartReader()
+	if err != nil {
+		writeJSONError(w, http.StatusBadRequest, "上传请求无效")
 		return
 	}
 
 	type itemResult struct {
-		Filename string `json:"filename"`
-		Category string `json:"category,omitempty"`
-		Status   string `json:"status"`
-		Error    string `json:"error,omitempty"`
+		Filename        string `json:"filename"`
+		RenamedFilename string `json:"renamedFilename,omitempty"`
+		Category        string `json:"category,omitempty"`
+		CategoryAbbr    string `json:"categoryAbbr,omitempty"`
+		DestinationPath string `json:"destinationPath,omitempty"`
+		Status          string `json:"status"`
+		Error           string `json:"error,omitempty"`
 	}
-	results := make([]itemResult, 0, len(files))
-	successCount := 0
 
-	for _, header := range files {
-		file, err := header.Open()
+	var (
+		category     string
+		useAI        bool
+		template     string
+		results      []itemResult
+		successCount int
+		totalFiles   int
+	)
+	versionCache := archiver.NewVersionCache()
+
+	for {
+		part, err := mr.NextPart()
+		if err == io.EOF {
+			break
+		}
 		if err != nil {
-			results = append(results, itemResult{
-				Filename: header.Filename,
-				Status:   "failed",
-				Error:    "打开上传文件失败",
-			})
-			continue
+			writeJSONError(w, http.StatusBadRequest, "读取上传数据失败")
+			return
 		}
 
-		safeName := filepath.Base(header.Filename)
-		if safeName == "." || safeName == string(filepath.Separator) || safeName == "" {
-			safeName = "uploaded-file"
-		}
-		localPath := filepath.Join(workDir, safeName)
+		name := part.FormName()
+		switch name {
+		case "category":
+			category = strings.TrimSpace(readSmallFormValue(part, 4<<10))
+		case "useAI":
+			useAI = strings.EqualFold(strings.TrimSpace(readSmallFormValue(part, 16)), "true")
+		case "template":
+			template = strings.TrimSpace(readSmallFormValue(part, 8<<10))
+		case "file":
+			totalFiles++
+			safeName := filepath.Base(part.FileName())
+			if safeName == "." || safeName == string(filepath.Separator) || safeName == "" {
+				safeName = "uploaded-file"
+			}
 
-		target, err := os.Create(localPath)
-		if err != nil {
-			_ = file.Close()
-			results = append(results, itemResult{
-				Filename: safeName,
-				Status:   "failed",
-				Error:    "创建临时文件失败",
-			})
-			continue
-		}
+			chosenTemplate := template
+			if chosenTemplate == "" {
+				chosenTemplate = cfg.TemplatePrefix
+			}
 
-		_, copyErr := io.Copy(target, file)
-		closeTargetErr := target.Close()
-		closeFileErr := file.Close()
-		if copyErr != nil || closeTargetErr != nil || closeFileErr != nil {
-			results = append(results, itemResult{
-				Filename: safeName,
-				Status:   "failed",
-				Error:    "写入临时文件失败",
-			})
-			continue
-		}
-
-		chosenCategory := category
-		if useAI {
-			chosenCategory, err = classifyCategoryByFilename(r.Context(), safeName, cfg)
-			if err != nil {
-				results = append(results, itemResult{
-					Filename: safeName,
-					Status:   "failed",
-					Error:    err.Error(),
-				})
+			if useAI && !aiConfigured(cfg.AI) {
+				_, _ = io.Copy(io.Discard, part)
+				results = append(results, itemResult{Filename: safeName, Status: "failed", Error: "AI 配置不完整，请先配置 url/apiKey/modelName"})
+				_ = part.Close()
 				continue
 			}
-		}
 
-		if err := archiver.RunWithConfig(localPath, chosenCategory, template, cfg); err != nil {
+			chosenCategory := category
+			if useAI {
+				chosenCategory, err = classifyCategoryByFilename(r.Context(), safeName, cfg)
+				if err != nil {
+					_, _ = io.Copy(io.Discard, part)
+					results = append(results, itemResult{Filename: safeName, Status: "failed", Error: err.Error()})
+					_ = part.Close()
+					continue
+				}
+			}
+			if !useAI && strings.TrimSpace(chosenCategory) == "" {
+				_, _ = io.Copy(io.Discard, part)
+				results = append(results, itemResult{Filename: safeName, Status: "failed", Error: "分类不能为空"})
+				_ = part.Close()
+				continue
+			}
+
+			archiveResult, err := archiver.RunReaderWithConfigResult(part, safeName, chosenCategory, chosenTemplate, cfg, versionCache)
+			if err != nil {
+				results = append(results, itemResult{Filename: safeName, Category: chosenCategory, Status: "failed", Error: err.Error()})
+				_ = part.Close()
+				continue
+			}
+			if err := part.Close(); err != nil {
+				results = append(results, itemResult{Filename: safeName, Category: chosenCategory, Status: "failed", Error: "关闭上传文件失败"})
+				continue
+			}
+
+			successCount++
 			results = append(results, itemResult{
-				Filename: safeName,
-				Category: chosenCategory,
-				Status:   "failed",
-				Error:    err.Error(),
+				Filename:        safeName,
+				RenamedFilename: archiveResult.RenamedFilename,
+				Category:        archiveResult.Category,
+				CategoryAbbr:    archiveResult.CategoryAbbr,
+				DestinationPath: archiveResult.DestinationPath,
+				Status:          "success",
 			})
-			continue
+		default:
+			_, _ = io.Copy(io.Discard, part)
 		}
 
-		successCount++
-		results = append(results, itemResult{
-			Filename: safeName,
-			Category: chosenCategory,
-			Status:   "success",
-		})
+		_ = part.Close()
+	}
+
+	if totalFiles == 0 {
+		writeJSONError(w, http.StatusBadRequest, "未选择文件")
+		return
 	}
 
 	writeJSON(w, http.StatusOK, map[string]any{
-		"message":      fmt.Sprintf("已处理 %d 个文件，成功 %d 个", len(files), successCount),
-		"total":        len(files),
+		"message":      fmt.Sprintf("已处理 %d 个文件，成功 %d 个", totalFiles, successCount),
+		"total":        totalFiles,
 		"successCount": successCount,
 		"results":      results,
 	})
@@ -228,8 +222,7 @@ func (s *Server) handleAITest(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	prompt := "请只回复 OK"
-	content, err := callOpenAICompatible(r.Context(), ai, prompt)
+	content, err := callOpenAICompatible(r.Context(), ai, "请只回复 OK")
 	if err != nil {
 		writeJSONError(w, http.StatusBadRequest, err.Error())
 		return
@@ -280,8 +273,7 @@ func classifyCategoryByFilename(ctx context.Context, filename string, cfg *archi
 	}
 	sort.Strings(categories)
 
-	prompt := buildClassifyPrompt(filename, categories)
-	respCategory, err := callOpenAICompatible(ctx, cfg.AI, prompt)
+	respCategory, err := callOpenAICompatible(ctx, cfg.AI, buildClassifyPrompt(filename, categories))
 	if err != nil {
 		return "", err
 	}
@@ -297,7 +289,7 @@ func classifyCategoryByFilename(ctx context.Context, filename string, cfg *archi
 
 func buildClassifyPrompt(filename string, categories []string) string {
 	return fmt.Sprintf(
-		"你是文件分类助手。根据文件名，从候选分类中选一个最合适的分类，只输出分类名称本身，不要任何解释。\n文件名: %s\n候选分类: %s\n输出要求: 仅输出一个分类名称，必须和候选项完全一致。",
+		"你是文件分类助手。根据文件名，从候选分类中选一个最合适的分类，只输出分类名本身，不要任何解释。\n文件名: %s\n候选分类: %s\n输出要求: 仅输出一个分类名称，必须和候选项完全一致。",
 		filename,
 		strings.Join(categories, "、"),
 	)
@@ -358,13 +350,8 @@ func callOpenAICompatible(ctx context.Context, ai archiver.AIConfig, prompt stri
 	}
 	defer resp.Body.Close()
 
-	respBytes, err := io.ReadAll(resp.Body)
-	if err != nil {
-		return "", fmt.Errorf("读取 AI 响应失败: %w", err)
-	}
-
 	var parsed chatCompletionsResponse
-	if err := json.Unmarshal(respBytes, &parsed); err != nil {
+	if err := json.NewDecoder(resp.Body).Decode(&parsed); err != nil {
 		return "", fmt.Errorf("解析 AI 响应失败")
 	}
 	if resp.StatusCode >= 300 {
@@ -377,6 +364,61 @@ func callOpenAICompatible(ctx context.Context, ai archiver.AIConfig, prompt stri
 		return "", fmt.Errorf("AI 响应为空")
 	}
 	return parsed.Choices[0].Message.Content, nil
+}
+
+type gzipResponseWriter struct {
+	http.ResponseWriter
+	writer io.Writer
+}
+
+func (w *gzipResponseWriter) Write(p []byte) (int, error) {
+	return w.writer.Write(p)
+}
+
+func gzipMiddleware(next http.Handler) http.Handler {
+	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		w.Header().Add("Vary", "Accept-Encoding")
+		if !strings.Contains(r.Header.Get("Accept-Encoding"), "gzip") {
+			next.ServeHTTP(w, r)
+			return
+		}
+
+		w.Header().Set("Content-Encoding", "gzip")
+		gz := gzip.NewWriter(w)
+		defer gz.Close()
+		next.ServeHTTP(&gzipResponseWriter{ResponseWriter: w, writer: gz}, r)
+	})
+}
+
+func buildETag(content []byte) string {
+	sum := sha256.Sum256(content)
+	return fmt.Sprintf("\"%x\"", sum[:8])
+}
+
+func serveEmbeddedHTML(w http.ResponseWriter, r *http.Request, content []byte, etag string) {
+	if r.Method != http.MethodGet {
+		http.Error(w, "method not allowed", http.StatusMethodNotAllowed)
+		return
+	}
+
+	if strings.TrimSpace(r.Header.Get("If-None-Match")) == etag {
+		w.WriteHeader(http.StatusNotModified)
+		return
+	}
+
+	headers := w.Header()
+	headers.Set("Content-Type", "text/html; charset=utf-8")
+	headers.Set("Cache-Control", "public, max-age=300")
+	headers.Set("ETag", etag)
+	_, _ = w.Write(content)
+}
+
+func readSmallFormValue(r io.Reader, max int64) string {
+	if max <= 0 {
+		max = 1024
+	}
+	b, _ := io.ReadAll(io.LimitReader(r, max))
+	return string(b)
 }
 
 func writeJSON(w http.ResponseWriter, status int, payload any) {

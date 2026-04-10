@@ -1,4 +1,4 @@
-package main
+﻿package main
 
 import (
 	"flag"
@@ -18,7 +18,7 @@ func main() {
 	template := flag.String("t", defaultTemplate, "文件名前缀模板（版本和扩展名会自动追加）")
 	configPath := flag.String("config", "", "配置文件路径 (默认: ./config.yaml)")
 	webMode := flag.Bool("web", false, "启动 Web 页面")
-	addr := flag.String("addr", ":8082", "Web 服务监听地址")
+	addr := flag.String("addr", ":8080", "Web 服务监听地址")
 	flag.Parse()
 
 	if *webMode {
