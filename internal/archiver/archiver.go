@@ -148,9 +148,6 @@ func buildTargetMeta(category, tmpl string, cfg *Config, filenameWithExt string)
 	if err != nil {
 		return archiveTargetMeta{}, err
 	}
-	if err := validateRenderedPrefix(renderedPrefix); err != nil {
-		return archiveTargetMeta{}, err
-	}
 
 	return archiveTargetMeta{
 		targetDir:      targetDir,

@@ -1,8 +1,9 @@
-package main
+﻿package main
 
 import (
 	"flag"
 	"fmt"
+	"net/http"
 	"os"
 
 	"filearchiver/internal/archiver"
@@ -18,21 +19,13 @@ func main() {
 	configPath := flag.String("config", "", "配置文件路径 (默认: ./config.yaml)")
 	webMode := flag.Bool("web", false, "启动 Web 页面")
 	addr := flag.String("addr", ":8080", "Web 服务监听地址")
-	trayMode := flag.Bool("tray", true, "启动系统托盘（未启用托盘构建时自动降级）")
 	flag.Parse()
 
 	if *webMode {
-		fmt.Printf("Web 页面地址: http://localhost%s\n", *addr)
-		if *trayMode {
-			if err := webui.RunWithTray(*addr, *configPath); err == nil {
-				return
-			} else {
-				fmt.Fprintf(os.Stderr, "托盘模式不可用，已降级为普通 Web 启动: %v\n", err)
-			}
-		}
-
-		if err := webui.Serve(*addr, *configPath); err != nil {
-			fmt.Fprintln(os.Stderr, "Web 服务启动失败:", err)
+		server := &webui.Server{ConfigPath: *configPath}
+		fmt.Printf("Web UI: http://localhost%s\n", *addr)
+		if err := http.ListenAndServe(*addr, server.Handler()); err != nil {
+			fmt.Fprintln(os.Stderr, err)
 			os.Exit(1)
 		}
 		return

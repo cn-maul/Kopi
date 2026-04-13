@@ -37,25 +37,25 @@ if /I "%~1"=="--clean" (
 if /I "%~1"=="-h" goto usage
 if /I "%~1"=="--help" goto usage
 
-echo 未知参数: %~1
+echo Unknown argument: %~1
 
 goto usage
 
 :arg_error
-echo 参数缺少值: %~1
+echo Missing value for argument: %~1
 
 goto usage
 
 :args_done
 if /I not "%ARCH%"=="amd64" if /I not "%ARCH%"=="arm64" (
-  echo --arch 参数无效: %ARCH%
-  echo 支持的取值: amd64, arm64
+  echo Invalid --arch value: %ARCH%
+  echo Supported values: amd64, arm64
   exit /b 1
 )
 
 where go >nul 2>nul
 if errorlevel 1 (
-  echo 未检测到 Go，或 Go 不在 PATH 中。
+  echo Go is not installed or not in PATH.
   exit /b 1
 )
 
@@ -63,7 +63,7 @@ set "SCRIPT_DIR=%~dp0"
 for %%I in ("%SCRIPT_DIR%..") do set "ROOT_DIR=%%~fI"
 pushd "%ROOT_DIR%" >nul
 if errorlevel 1 (
-  echo 进入项目目录失败: %ROOT_DIR%
+  echo Failed to enter project directory: %ROOT_DIR%
   exit /b 1
 )
 
@@ -74,9 +74,9 @@ if not exist "%OUTPUT_DIR%" mkdir "%OUTPUT_DIR%"
 
 set "TARGET=%OUTPUT_DIR%\%BINARY_NAME%-windows-%ARCH%.exe"
 
-echo 正在编译 Windows 可执行文件...
-echo   项目目录: %ROOT_DIR%
-echo   输出文件: %TARGET%
+echo Building Windows executable...
+echo   Project : %ROOT_DIR%
+echo   Target  : %TARGET%
 
 set "CGO_ENABLED=0"
 set "GOOS=windows"
@@ -84,20 +84,20 @@ set "GOARCH=%ARCH%"
 
 go build -trimpath -ldflags "-s -w" -o "%TARGET%" .
 if errorlevel 1 (
-  echo go build 编译失败。
+  echo go build failed.
   popd >nul
   exit /b 1
 )
 
-echo 编译完成: %TARGET%
+echo Build completed: %TARGET%
 popd >nul
 exit /b 0
 
 :usage
-echo 用法:
-echo   scripts\build_windows.bat [--out-dir 目录] [--name 名称] [--arch amd64^|arm64] [--clean]
+echo Usage:
+echo   scripts\build_windows.bat [--out-dir DIR] [--name NAME] [--arch amd64^|arm64] [--clean]
 echo.
-echo 示例:
+echo Examples:
 echo   scripts\build_windows.bat
 echo   scripts\build_windows.bat --arch arm64
 echo   scripts\build_windows.bat --out-dir release --name kopi --clean

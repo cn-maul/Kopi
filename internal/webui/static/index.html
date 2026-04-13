@@ -216,49 +216,27 @@
       box-shadow: none;
     }
 
-    .toast-stack {
-      position: fixed;
-      top: 14px;
-      right: 14px;
-      z-index: 9999;
-      display: grid;
-      gap: 8px;
-      width: min(92vw, 420px);
-      pointer-events: none;
-    }
-
-    .toast {
+    .status {
+      margin-top: 12px;
       border: 1px solid var(--line);
-      border-left: 4px solid rgba(31, 44, 48, 0.35);
       border-radius: 12px;
       padding: 10px 12px;
       font-size: 13px;
-      color: var(--ink);
-      background: rgba(255, 255, 255, 0.96);
+      background: rgba(255, 255, 255, 0.72);
       white-space: pre-wrap;
-      box-shadow: 0 12px 28px rgba(17, 24, 39, 0.15);
-      opacity: 0;
-      transform: translateY(-8px);
-      transition: opacity .2s ease, transform .2s ease;
+      color: var(--ink);
     }
 
-    .toast.show {
-      opacity: 1;
-      transform: translateY(0);
-    }
-
-    .toast.error {
+    .status.error {
       border-color: rgba(180, 35, 24, 0.35);
-      border-left-color: #b42318;
-      background: #fff4f3;
       color: var(--danger);
+      background: #fff4f3;
     }
 
-    .toast.success {
+    .status.success {
       border-color: rgba(15, 118, 110, 0.35);
-      border-left-color: #0f766e;
-      background: #f2fdf9;
       color: var(--ok);
+      background: #f2fdf9;
     }
 
     @media (max-width: 820px) {
@@ -322,9 +300,9 @@
         <div class="hint">批量文件会逐个处理并返回每个文件结果。</div>
       </div>
 
+      <div id="archiveStatus" class="status">等待操作</div>
     </section>
   </main>
-  <div id="toastStack" class="toast-stack" aria-live="polite" aria-atomic="false"></div>
 
   <script>
     const state = {
@@ -342,28 +320,13 @@
       useAI: document.getElementById('useAI'),
       aiHint: document.getElementById('aiHint'),
       archiveBtn: document.getElementById('archiveBtn'),
-      toastStack: document.getElementById('toastStack'),
+      status: document.getElementById('archiveStatus'),
     };
 
-    function setStatus(message, type = 'normal', durationMs) {
-      const toast = document.createElement('div');
-      toast.className = `toast ${type === 'error' ? 'error' : type === 'success' ? 'success' : ''}`.trim();
-      toast.textContent = message;
-      el.toastStack.appendChild(toast);
-
-      requestAnimationFrame(() => {
-        toast.classList.add('show');
-      });
-
-      const timeout = typeof durationMs === 'number'
-        ? durationMs
-        : (type === 'error' ? 6500 : 3500);
-      window.setTimeout(() => {
-        toast.classList.remove('show');
-        window.setTimeout(() => {
-          toast.remove();
-        }, 220);
-      }, timeout);
+    function setStatus(message, type = 'normal') {
+      el.status.textContent = message;
+      el.status.classList.toggle('error', type === 'error');
+      el.status.classList.toggle('success', type === 'success');
     }
 
     function escapeHtml(value) {

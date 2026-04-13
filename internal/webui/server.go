@@ -6,7 +6,6 @@ import (
 	"context"
 	"crypto/sha256"
 	"encoding/json"
-	"errors"
 	"fmt"
 	"io"
 	"net/http"
@@ -26,8 +25,6 @@ var (
 	indexETag    = buildETag(indexHTML)
 	settingsETag = buildETag(settingsHTML)
 )
-
-const maxJSONBodyBytes = 1 << 20
 
 func (s *Server) Handler() http.Handler {
 	mux := http.NewServeMux()
@@ -63,7 +60,7 @@ func (s *Server) handleConfig(w http.ResponseWriter, r *http.Request) {
 		writeJSON(w, http.StatusOK, cfg)
 	case http.MethodPost:
 		var req archiver.Config
-		if err := decodeJSONBody(w, r, &req); err != nil {
+		if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
 			writeJSONError(w, http.StatusBadRequest, "配置格式无效")
 			return
 		}
@@ -216,7 +213,7 @@ func (s *Server) handleAITest(w http.ResponseWriter, r *http.Request) {
 	}
 
 	var ai archiver.AIConfig
-	if err := decodeJSONBody(w, r, &ai); err != nil {
+	if err := json.NewDecoder(r.Body).Decode(&ai); err != nil {
 		writeJSONError(w, http.StatusBadRequest, "请求格式无效")
 		return
 	}
@@ -432,24 +429,4 @@ func writeJSON(w http.ResponseWriter, status int, payload any) {
 
 func writeJSONError(w http.ResponseWriter, status int, message string) {
 	writeJSON(w, status, map[string]string{"error": message})
-}
-
-func decodeJSONBody(w http.ResponseWriter, r *http.Request, dst any) error {
-	r.Body = http.MaxBytesReader(w, r.Body, maxJSONBodyBytes)
-
-	decoder := json.NewDecoder(r.Body)
-	decoder.DisallowUnknownFields()
-	if err := decoder.Decode(dst); err != nil {
-		if strings.Contains(err.Error(), "http: request body too large") {
-			return fmt.Errorf("请求体过大")
-		}
-		return err
-	}
-
-	var extra any
-	if err := decoder.Decode(&extra); !errors.Is(err, io.EOF) {
-		return fmt.Errorf("请求格式无效")
-	}
-
-	return nil
 }

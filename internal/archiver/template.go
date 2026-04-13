@@ -39,20 +39,3 @@ func renderTemplate(tmpl string, values TemplateValues) (string, error) {
 func containsUnknownPlaceholder(value string) bool {
 	return unknownPlaceholderPattern.MatchString(knownPlaceholderReplacer.Replace(value))
 }
-
-func validateRenderedPrefix(rendered string) error {
-	trimmed := strings.TrimSpace(rendered)
-	if trimmed == "" {
-		return fmt.Errorf("模板渲染结果为空")
-	}
-	if strings.ContainsAny(trimmed, `/\`) {
-		return fmt.Errorf("模板渲染结果不能包含路径分隔符")
-	}
-	if strings.Contains(trimmed, "..") {
-		return fmt.Errorf("模板渲染结果不能包含连续点号")
-	}
-	if strings.ContainsRune(trimmed, 0) {
-		return fmt.Errorf("模板渲染结果包含非法字符")
-	}
-	return nil
-}
