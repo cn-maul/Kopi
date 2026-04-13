@@ -1,0 +1,573 @@
+﻿<!doctype html>
+<html lang="zh-CN">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
+  <title>Kopi | 配置</title>
+  <style>
+    :root {
+      --bg: #f4f2ea;
+      --ink: #1f2c30;
+      --muted: #5f6f75;
+      --line: rgba(31, 44, 48, 0.18);
+      --panel: rgba(255, 255, 255, 0.84);
+      --accent: #0f766e;
+      --danger: #b42318;
+      --ok: #0f766e;
+      --radius: 16px;
+    }
+
+    * { box-sizing: border-box; }
+
+    body {
+      margin: 0;
+      min-height: 100vh;
+      color: var(--ink);
+      font-family: "Segoe UI", "PingFang SC", "Microsoft YaHei", "Noto Sans CJK SC", sans-serif;
+      background:
+        radial-gradient(1200px 560px at -10% -24%, rgba(15, 118, 110, 0.16), transparent 55%),
+        radial-gradient(960px 560px at 110% 0%, rgba(180, 83, 9, 0.15), transparent 58%),
+        var(--bg);
+      padding: 16px;
+      padding-bottom: calc(16px + env(safe-area-inset-bottom));
+    }
+
+    .app {
+      max-width: 1080px;
+      margin: 0 auto;
+      display: grid;
+      gap: 12px;
+    }
+
+    .panel {
+      border: 1px solid var(--line);
+      border-radius: var(--radius);
+      background: var(--panel);
+      backdrop-filter: blur(10px);
+      box-shadow: 0 14px 36px rgba(17, 24, 39, 0.08);
+      padding: 14px;
+    }
+
+    .topbar {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      gap: 10px;
+    }
+
+    .topbar h1 {
+      margin: 0;
+      font-family: "Georgia", "Times New Roman", "Songti SC", serif;
+      font-size: 26px;
+      letter-spacing: 1px;
+    }
+
+    .topbar p {
+      margin: 4px 0 0;
+      font-size: 12px;
+      color: var(--muted);
+    }
+
+    .icon-btn {
+      min-width: 44px;
+      min-height: 44px;
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      border: 1px solid var(--line);
+      border-radius: 12px;
+      color: var(--ink);
+      text-decoration: none;
+      background: rgba(255, 255, 255, 0.7);
+      flex-shrink: 0;
+    }
+
+    .icon-btn svg {
+      width: 18px;
+      height: 18px;
+      fill: currentColor;
+    }
+
+    .layout {
+      display: grid;
+      gap: 12px;
+      grid-template-columns: 1fr;
+    }
+
+    .section-title {
+      margin: 0 0 10px;
+      font-size: 16px;
+      font-weight: 700;
+    }
+
+    .grid {
+      display: grid;
+      gap: 10px;
+      grid-template-columns: 1fr;
+    }
+
+    label {
+      display: block;
+      font-size: 12px;
+      color: var(--muted);
+      margin-bottom: 6px;
+    }
+
+    input[type="text"] {
+      width: 100%;
+      min-height: 44px;
+      border: 1px solid var(--line);
+      border-radius: 11px;
+      background: #fff;
+      color: var(--ink);
+      font-size: 14px;
+      padding: 0 12px;
+    }
+
+    .muted {
+      font-size: 12px;
+      color: var(--muted);
+      margin-top: 6px;
+      word-break: break-all;
+    }
+
+    .category-list {
+      display: grid;
+      gap: 8px;
+      margin-top: 8px;
+    }
+
+    .category-row {
+      display: grid;
+      grid-template-columns: 1fr;
+      gap: 8px;
+      padding: 8px;
+      border: 1px solid var(--line);
+      border-radius: 12px;
+      background: rgba(255, 255, 255, 0.76);
+    }
+
+    .actions {
+      display: flex;
+      gap: 8px;
+      flex-wrap: wrap;
+      margin-top: 12px;
+      align-items: center;
+    }
+
+    .btn {
+      min-height: 44px;
+      border: 0;
+      border-radius: 11px;
+      padding: 0 14px;
+      font-size: 14px;
+      cursor: pointer;
+      color: #0f172a;
+      background: #e2e8f0;
+      font-weight: 600;
+    }
+
+    .btn.primary {
+      color: #fff;
+      background: linear-gradient(120deg, #0f766e, #0f5f76);
+      box-shadow: 0 8px 20px rgba(15, 118, 110, 0.24);
+    }
+
+    .btn.danger {
+      color: #7f1d1d;
+      background: #fee2e2;
+    }
+
+    .btn:disabled {
+      opacity: 0.6;
+      cursor: not-allowed;
+      box-shadow: none;
+    }
+
+    .toast-stack {
+      position: fixed;
+      top: 14px;
+      right: 14px;
+      z-index: 9999;
+      display: grid;
+      gap: 8px;
+      width: min(92vw, 420px);
+      pointer-events: none;
+    }
+
+    .toast {
+      border: 1px solid var(--line);
+      border-left: 4px solid rgba(31, 44, 48, 0.35);
+      border-radius: 12px;
+      padding: 10px 12px;
+      font-size: 13px;
+      color: var(--ink);
+      background: rgba(255, 255, 255, 0.96);
+      white-space: pre-wrap;
+      box-shadow: 0 12px 28px rgba(17, 24, 39, 0.15);
+      opacity: 0;
+      transform: translateY(-8px);
+      transition: opacity .2s ease, transform .2s ease;
+    }
+
+    .toast.show {
+      opacity: 1;
+      transform: translateY(0);
+    }
+
+    .toast.error {
+      border-color: rgba(180, 35, 24, 0.35);
+      border-left-color: #b42318;
+      color: var(--danger);
+      background: #fff4f3;
+    }
+
+    .toast.success {
+      border-color: rgba(15, 118, 110, 0.35);
+      border-left-color: #0f766e;
+      color: var(--ok);
+      background: #f2fdf9;
+    }
+
+    @media (min-width: 860px) {
+      .layout {
+        grid-template-columns: 1.2fr 1fr;
+      }
+
+      .grid.two {
+        grid-template-columns: 1fr 1fr;
+      }
+
+      .category-row {
+        grid-template-columns: 1fr 1fr auto;
+        align-items: center;
+      }
+
+      .category-row .btn {
+        width: 88px;
+        min-height: 44px;
+        align-self: center;
+      }
+
+      .topbar h1 {
+        font-size: 28px;
+      }
+    }
+
+    @media (max-width: 480px) {
+      body { padding: 12px; }
+      .panel { padding: 12px; }
+      .actions .btn { width: 100%; }
+    }
+  </style>
+</head>
+<body>
+  <main class="app">
+    <header class="panel topbar">
+      <div>
+        <h1>归档配置</h1>
+        <p>程序配置和 AI 配置统一维护，保存后立即生效。</p>
+      </div>
+      <a class="icon-btn" href="/" title="返回上传页面" aria-label="返回上传页面">
+        <svg viewBox="0 0 24 24" aria-hidden="true">
+          <path d="M10.83 19.59 4.24 13a1.4 1.4 0 0 1 0-1.98l6.59-6.59a1 1 0 1 1 1.42 1.42L7.66 10.4H19a1 1 0 1 1 0 2H7.66l4.59 4.59a1 1 0 0 1-1.42 1.42Z"/>
+        </svg>
+      </a>
+    </header>
+
+    <section class="layout">
+      <div class="panel">
+        <h2 class="section-title">程序配置</h2>
+
+        <div class="grid two">
+          <div>
+            <label for="archiveBaseDir">归档根目录</label>
+            <input id="archiveBaseDir" type="text" placeholder="例如: C:\\archive 或 /home/user/archive" />
+            <div class="muted">浏览器无法返回本机绝对路径，请手动输入。</div>
+            <div id="archiveAbsPath" class="muted">服务端解析路径: -</div>
+          </div>
+
+          <div>
+            <label for="templatePrefix">前缀模板</label>
+            <input id="templatePrefix" type="text" placeholder="{category_abbr}-{yyyymmdd}-{filename}" />
+          </div>
+        </div>
+
+        <div style="margin-top: 12px;">
+          <label>分类映射</label>
+          <div id="categoriesList" class="category-list"></div>
+          <div class="actions">
+            <button id="addCategoryBtn" type="button" class="btn">新增分类</button>
+          </div>
+        </div>
+
+        <div class="actions">
+          <button id="reloadConfigBtn" type="button" class="btn">重新加载</button>
+          <button id="saveConfigBtn" type="button" class="btn primary">保存程序配置</button>
+        </div>
+      </div>
+
+      <div class="panel">
+        <h2 class="section-title">AI 配置</h2>
+
+        <div class="grid">
+          <div>
+            <label for="aiUrl">AI URL (OpenAI 格式)</label>
+            <input id="aiUrl" type="text" placeholder="例如: https://api.openai.com/v1" />
+          </div>
+          <div>
+            <label for="aiModelName">AI Model Name</label>
+            <input id="aiModelName" type="text" placeholder="例如: gpt-4.1-mini" />
+          </div>
+          <div>
+            <label for="aiApiKey">AI API Key</label>
+            <input id="aiApiKey" type="text" placeholder="sk-..." />
+          </div>
+        </div>
+
+        <div class="actions">
+          <button id="testAIBtn" type="button" class="btn">测试 AI 配置</button>
+          <button id="saveConfigBtn2" type="button" class="btn primary">保存 AI 配置</button>
+        </div>
+      </div>
+
+    </section>
+  </main>
+  <div id="toastStack" class="toast-stack" aria-live="polite" aria-atomic="false"></div>
+
+  <script>
+    const state = {
+      isBusy: false,
+      resolveTimer: null,
+    };
+
+    const el = {
+      toastStack: document.getElementById('toastStack'),
+      archiveBaseDir: document.getElementById('archiveBaseDir'),
+      archiveAbsPath: document.getElementById('archiveAbsPath'),
+      templatePrefix: document.getElementById('templatePrefix'),
+      categoriesList: document.getElementById('categoriesList'),
+      aiUrl: document.getElementById('aiUrl'),
+      aiModelName: document.getElementById('aiModelName'),
+      aiApiKey: document.getElementById('aiApiKey'),
+      addCategoryBtn: document.getElementById('addCategoryBtn'),
+      reloadConfigBtn: document.getElementById('reloadConfigBtn'),
+      saveConfigBtn: document.getElementById('saveConfigBtn'),
+      saveConfigBtn2: document.getElementById('saveConfigBtn2'),
+      testAIBtn: document.getElementById('testAIBtn'),
+    };
+
+    function setStatus(message, type = 'normal', durationMs) {
+      const toast = document.createElement('div');
+      toast.className = `toast ${type === 'error' ? 'error' : type === 'success' ? 'success' : ''}`.trim();
+      toast.textContent = message;
+      el.toastStack.appendChild(toast);
+
+      requestAnimationFrame(() => {
+        toast.classList.add('show');
+      });
+
+      const timeout = typeof durationMs === 'number'
+        ? durationMs
+        : (type === 'error' ? 6500 : 3200);
+      window.setTimeout(() => {
+        toast.classList.remove('show');
+        window.setTimeout(() => {
+          toast.remove();
+        }, 220);
+      }, timeout);
+    }
+
+    function setBusy(value) {
+      state.isBusy = value;
+      [
+        el.addCategoryBtn,
+        el.reloadConfigBtn,
+        el.saveConfigBtn,
+        el.saveConfigBtn2,
+        el.testAIBtn,
+      ].forEach(button => {
+        button.disabled = value;
+      });
+    }
+
+    async function fetchJSON(url, options) {
+      const response = await fetch(url, options);
+      const data = await response.json();
+      if (!response.ok) {
+        throw new Error(data.error || '请求失败');
+      }
+      return data;
+    }
+
+    function createCategoryRow(name = '', abbr = '') {
+      const row = document.createElement('div');
+      row.className = 'category-row';
+
+      const nameInput = document.createElement('input');
+      nameInput.type = 'text';
+      nameInput.className = 'cat-name';
+      nameInput.placeholder = '分类名称';
+      nameInput.value = name;
+
+      const abbrInput = document.createElement('input');
+      abbrInput.type = 'text';
+      abbrInput.className = 'cat-abbr';
+      abbrInput.placeholder = '英文缩写';
+      abbrInput.value = abbr;
+
+      const removeBtn = document.createElement('button');
+      removeBtn.type = 'button';
+      removeBtn.className = 'btn danger';
+      removeBtn.textContent = '删除';
+      removeBtn.addEventListener('click', () => row.remove());
+
+      row.appendChild(nameInput);
+      row.appendChild(abbrInput);
+      row.appendChild(removeBtn);
+      el.categoriesList.appendChild(row);
+    }
+
+    function loadCategories(categoriesMap) {
+      el.categoriesList.innerHTML = '';
+      const entries = Object.entries(categoriesMap || {});
+      if (!entries.length) {
+        createCategoryRow('', '');
+        return;
+      }
+      entries.forEach(([name, abbr]) => createCategoryRow(name, abbr));
+    }
+
+    function collectCategories() {
+      const result = {};
+      const rows = el.categoriesList.querySelectorAll('.category-row');
+
+      for (const row of rows) {
+        const name = row.querySelector('.cat-name').value.trim();
+        const abbr = row.querySelector('.cat-abbr').value.trim();
+        if (!name && !abbr) continue;
+        if (!name || !abbr) {
+          throw new Error('分类映射每一行都要同时填写分类名和缩写。');
+        }
+        result[name] = abbr;
+      }
+
+      if (!Object.keys(result).length) {
+        throw new Error('分类映射不能为空。');
+      }
+      return result;
+    }
+
+    async function resolveArchiveAbsolutePath() {
+      const raw = el.archiveBaseDir.value.trim();
+      if (!raw) {
+        el.archiveAbsPath.textContent = '服务端解析路径: -';
+        return;
+      }
+
+      try {
+        const data = await fetchJSON(`/api/path/resolve?path=${encodeURIComponent(raw)}`);
+        el.archiveAbsPath.textContent = `服务端解析路径: ${data.absolutePath || '-'}`;
+      } catch {
+        el.archiveAbsPath.textContent = '服务端解析路径: 解析失败';
+      }
+    }
+
+    function queueResolvePath() {
+      clearTimeout(state.resolveTimer);
+      state.resolveTimer = setTimeout(resolveArchiveAbsolutePath, 200);
+    }
+
+    async function loadConfig() {
+      setBusy(true);
+      setStatus('加载配置中...');
+      try {
+        const data = await fetchJSON('/api/config');
+
+        el.archiveBaseDir.value = data.archiveBaseDir || 'archive';
+        el.templatePrefix.value = data.templatePrefix || '{category_abbr}-{yyyymmdd}-{filename}';
+        el.aiUrl.value = (data.ai && data.ai.url) || '';
+        el.aiApiKey.value = (data.ai && data.ai.apiKey) || '';
+        el.aiModelName.value = (data.ai && data.ai.modelName) || '';
+        loadCategories(data.categories);
+        await resolveArchiveAbsolutePath();
+        setStatus('配置已加载', 'success');
+      } catch (error) {
+        setStatus(error.message || '加载失败', 'error');
+      } finally {
+        setBusy(false);
+      }
+    }
+
+    function buildPayload() {
+      return {
+        archiveBaseDir: el.archiveBaseDir.value.trim() || 'archive',
+        templatePrefix: el.templatePrefix.value.trim(),
+        categories: collectCategories(),
+        ai: {
+          url: el.aiUrl.value.trim(),
+          apiKey: el.aiApiKey.value.trim(),
+          modelName: el.aiModelName.value.trim(),
+        },
+      };
+    }
+
+    async function saveConfig() {
+      try {
+        const payload = buildPayload();
+        setBusy(true);
+        setStatus('保存配置中...');
+        const data = await fetchJSON('/api/config', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify(payload),
+        });
+        await resolveArchiveAbsolutePath();
+        setStatus(data.message || '配置已保存', 'success');
+      } catch (error) {
+        setStatus(error.message || '保存失败', 'error');
+      } finally {
+        setBusy(false);
+      }
+    }
+
+    async function testAIConfig() {
+      try {
+        setBusy(true);
+        setStatus('测试 AI 连通中...');
+
+        const data = await fetchJSON('/api/ai/test', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            url: el.aiUrl.value.trim(),
+            apiKey: el.aiApiKey.value.trim(),
+            modelName: el.aiModelName.value.trim(),
+          }),
+        });
+
+        const message = data.reply
+          ? `${data.message}\n模型回复: ${data.reply}`
+          : (data.message || '测试成功');
+        setStatus(message, 'success');
+      } catch (error) {
+        setStatus(error.message || '测试失败', 'error');
+      } finally {
+        setBusy(false);
+      }
+    }
+
+    function bindEvents() {
+      el.reloadConfigBtn.addEventListener('click', loadConfig);
+      el.addCategoryBtn.addEventListener('click', () => createCategoryRow('', ''));
+      el.saveConfigBtn.addEventListener('click', saveConfig);
+      el.saveConfigBtn2.addEventListener('click', saveConfig);
+      el.testAIBtn.addEventListener('click', testAIConfig);
+      el.archiveBaseDir.addEventListener('input', queueResolvePath);
+    }
+
+    bindEvents();
+    loadConfig();
+  </script>
+</body>
+</html>

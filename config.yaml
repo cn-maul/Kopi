@@ -1,0 +1,9 @@
+archiveBaseDir: archive
+categories:
+    开发: DEV
+    测试: TEST
+templatePrefix: '{category_abbr}-{yyyymmdd}-{filename}'
+ai:
+    url: ""
+    apiKey: ""
+    modelName: ""

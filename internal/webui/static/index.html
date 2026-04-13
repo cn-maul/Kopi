@@ -1,0 +1,539 @@
+﻿<!doctype html>
+<html lang="zh-CN">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
+  <title>Kopi | 文件归档</title>
+  <style>
+    :root {
+      --bg: #f4f2ea;
+      --ink: #1f2c30;
+      --muted: #5f6f75;
+      --line: rgba(31, 44, 48, 0.18);
+      --panel: rgba(255, 255, 255, 0.82);
+      --accent: #0f766e;
+      --accent-2: #b45309;
+      --danger: #b42318;
+      --ok: #0f766e;
+      --radius: 16px;
+    }
+
+    * { box-sizing: border-box; }
+
+    body {
+      margin: 0;
+      min-height: 100vh;
+      color: var(--ink);
+      font-family: "Segoe UI", "PingFang SC", "Microsoft YaHei", "Noto Sans CJK SC", sans-serif;
+      background:
+        radial-gradient(1200px 560px at -10% -24%, rgba(15, 118, 110, 0.16), transparent 55%),
+        radial-gradient(960px 560px at 110% 0%, rgba(180, 83, 9, 0.15), transparent 58%),
+        var(--bg);
+      padding: 16px;
+      padding-bottom: calc(16px + env(safe-area-inset-bottom));
+    }
+
+    .app {
+      max-width: 980px;
+      margin: 0 auto;
+      display: grid;
+      gap: 12px;
+    }
+
+    .topbar {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      gap: 12px;
+    }
+
+    .title-block h1 {
+      margin: 0;
+      font-size: 28px;
+      line-height: 1.2;
+      font-family: "Georgia", "Times New Roman", "Songti SC", serif;
+      letter-spacing: 1px;
+    }
+
+    .title-block p {
+      margin: 4px 0 0;
+      color: var(--muted);
+      font-size: 13px;
+    }
+
+    .icon-btn {
+      min-width: 44px;
+      min-height: 44px;
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      border: 1px solid var(--line);
+      border-radius: 12px;
+      color: var(--ink);
+      text-decoration: none;
+      background: rgba(255, 255, 255, 0.68);
+      backdrop-filter: blur(6px);
+      transition: transform .2s ease, border-color .2s ease;
+      flex-shrink: 0;
+    }
+
+    .icon-btn:hover {
+      transform: translateY(-1px);
+      border-color: rgba(15, 118, 110, 0.6);
+    }
+
+    .icon-btn svg {
+      width: 18px;
+      height: 18px;
+      fill: currentColor;
+    }
+
+    .panel {
+      border: 1px solid var(--line);
+      border-radius: var(--radius);
+      background: var(--panel);
+      backdrop-filter: blur(10px);
+      box-shadow: 0 14px 36px rgba(17, 24, 39, 0.08);
+      padding: 16px;
+    }
+
+    .dropzone {
+      border: 2px dashed rgba(15, 118, 110, 0.45);
+      border-radius: 14px;
+      padding: 22px 14px;
+      text-align: center;
+      cursor: pointer;
+      background: linear-gradient(180deg, rgba(15, 118, 110, 0.08), rgba(15, 118, 110, 0.02));
+      transition: transform .2s ease, border-color .2s ease, background .2s ease;
+    }
+
+    .dropzone.dragover {
+      transform: translateY(-1px);
+      border-color: var(--accent-2);
+      background: linear-gradient(180deg, rgba(180, 83, 9, 0.14), rgba(180, 83, 9, 0.05));
+    }
+
+    .drop-title {
+      font-size: 15px;
+      font-weight: 600;
+    }
+
+    .drop-sub {
+      margin-top: 6px;
+      color: var(--muted);
+      font-size: 12px;
+    }
+
+    .file-preview {
+      margin-top: 12px;
+      display: grid;
+      gap: 6px;
+    }
+
+    .file-chip {
+      border: 1px solid var(--line);
+      border-radius: 10px;
+      padding: 6px 10px;
+      font-size: 12px;
+      background: rgba(255, 255, 255, 0.8);
+      overflow: hidden;
+      text-overflow: ellipsis;
+      white-space: nowrap;
+    }
+
+    .file-summary {
+      color: var(--muted);
+      font-size: 12px;
+    }
+
+
+    .controls {
+      margin-top: 14px;
+      display: grid;
+      gap: 12px;
+      grid-template-columns: 1fr;
+      align-items: start;
+    }
+
+    .field {
+      display: grid;
+      gap: 6px;
+    }
+
+    .field label {
+      font-size: 12px;
+      color: var(--muted);
+    }
+
+    .select,
+    .btn {
+      min-height: 44px;
+      border-radius: 11px;
+      font-size: 14px;
+    }
+
+    .select {
+      width: 100%;
+      border: 1px solid var(--line);
+      background: #fff;
+      color: var(--ink);
+      padding: 0 12px;
+    }
+
+    .select:disabled {
+      opacity: 0.65;
+      background: #f5f5f5;
+    }
+
+    .switch-row {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      color: var(--ink);
+      font-size: 14px;
+      margin-top: 4px;
+    }
+
+    .hint {
+      color: var(--muted);
+      font-size: 12px;
+      margin-top: 4px;
+    }
+
+    .btn {
+      border: 0;
+      cursor: pointer;
+      color: #fff;
+      background: linear-gradient(120deg, #0f766e, #0f5f76);
+      box-shadow: 0 8px 20px rgba(15, 118, 110, 0.24);
+      padding: 0 14px;
+      font-weight: 600;
+    }
+
+    .btn:disabled {
+      opacity: 0.6;
+      cursor: not-allowed;
+      box-shadow: none;
+    }
+
+    .toast-stack {
+      position: fixed;
+      top: 14px;
+      right: 14px;
+      z-index: 9999;
+      display: grid;
+      gap: 8px;
+      width: min(92vw, 420px);
+      pointer-events: none;
+    }
+
+    .toast {
+      border: 1px solid var(--line);
+      border-left: 4px solid rgba(31, 44, 48, 0.35);
+      border-radius: 12px;
+      padding: 10px 12px;
+      font-size: 13px;
+      color: var(--ink);
+      background: rgba(255, 255, 255, 0.96);
+      white-space: pre-wrap;
+      box-shadow: 0 12px 28px rgba(17, 24, 39, 0.15);
+      opacity: 0;
+      transform: translateY(-8px);
+      transition: opacity .2s ease, transform .2s ease;
+    }
+
+    .toast.show {
+      opacity: 1;
+      transform: translateY(0);
+    }
+
+    .toast.error {
+      border-color: rgba(180, 35, 24, 0.35);
+      border-left-color: #b42318;
+      background: #fff4f3;
+      color: var(--danger);
+    }
+
+    .toast.success {
+      border-color: rgba(15, 118, 110, 0.35);
+      border-left-color: #0f766e;
+      background: #f2fdf9;
+      color: var(--ok);
+    }
+
+    @media (max-width: 820px) {
+      .topbar {
+        align-items: flex-start;
+      }
+
+      .title-block h1 {
+        font-size: 24px;
+      }
+    }
+
+    @media (max-width: 480px) {
+      body { padding: 12px; }
+      .panel { padding: 12px; }
+      .dropzone { padding: 18px 12px; }
+      .drop-title { font-size: 14px; }
+      .title-block p { font-size: 12px; }
+    }
+  </style>
+</head>
+<body>
+  <main class="app">
+    <header class="topbar panel">
+      <div class="title-block">
+        <h1>文件归档</h1>
+        <p>拖拽上传后自动归档，版本号会按规则递增。</p>
+      </div>
+      <a class="icon-btn" href="/settings" title="设置" aria-label="设置">
+        <svg viewBox="0 0 24 24" aria-hidden="true">
+          <path d="M19.14 12.94c.04-.31.06-.63.06-.94s-.02-.63-.06-.94l2.03-1.58a.5.5 0 0 0 .12-.64l-1.92-3.32a.5.5 0 0 0-.6-.22l-2.39.96a7.14 7.14 0 0 0-1.63-.94L14.4 2.8a.5.5 0 0 0-.49-.4h-3.82a.5.5 0 0 0-.49.4l-.36 2.52c-.58.23-1.12.54-1.63.94l-2.39-.96a.5.5 0 0 0-.6.22L2.7 8.84a.5.5 0 0 0 .12.64l2.03 1.58c-.04.31-.06.63-.06.94s.02.63.06.94L2.82 14.52a.5.5 0 0 0-.12.64l1.92 3.32c.13.22.39.31.6.22l2.39-.96c.5.4 1.05.72 1.63.94l.36 2.52c.04.24.25.4.49.4h3.82c.24 0 .45-.16.49-.4l.36-2.52c.58-.23 1.12-.54 1.63-.94l2.39.96c.22.09.47 0 .6-.22l1.92-3.32a.5.5 0 0 0-.12-.64l-2.03-1.58ZM12 15.6a3.6 3.6 0 1 1 0-7.2 3.6 3.6 0 0 1 0 7.2Z"/>
+        </svg>
+      </a>
+    </header>
+
+    <section class="panel">
+      <div id="dropzone" class="dropzone" role="button" tabindex="0" aria-label="选择文件">
+        <div class="drop-title">拖拽文件到这里，或点击选择文件</div>
+        <div class="drop-sub">支持多文件批量归档</div>
+        <input id="fileInput" type="file" multiple hidden />
+      </div>
+
+      <div id="filePreview" class="file-preview">
+        <div class="file-summary">未选择文件</div>
+      </div>
+
+      <div class="controls">
+        <div class="field">
+          <label for="category">分类</label>
+          <select id="category" class="select"></select>
+          <label class="switch-row">
+            <input id="useAI" type="checkbox" />
+            使用 AI 自动判断分类
+          </label>
+          <div id="aiHint" class="hint">未配置 AI，需手动选择分类。</div>
+        </div>
+      </div>
+
+      <div class="field" style="margin-top: 8px;">
+        <button id="archiveBtn" class="btn" type="button">开始归档</button>
+        <div class="hint">批量文件会逐个处理并返回每个文件结果。</div>
+      </div>
+
+    </section>
+  </main>
+  <div id="toastStack" class="toast-stack" aria-live="polite" aria-atomic="false"></div>
+
+  <script>
+    const state = {
+      files: [],
+      config: null,
+      aiReady: false,
+      isArchiving: false,
+    };
+
+    const el = {
+      dropzone: document.getElementById('dropzone'),
+      fileInput: document.getElementById('fileInput'),
+      filePreview: document.getElementById('filePreview'),
+      category: document.getElementById('category'),
+      useAI: document.getElementById('useAI'),
+      aiHint: document.getElementById('aiHint'),
+      archiveBtn: document.getElementById('archiveBtn'),
+      toastStack: document.getElementById('toastStack'),
+    };
+
+    function setStatus(message, type = 'normal', durationMs) {
+      const toast = document.createElement('div');
+      toast.className = `toast ${type === 'error' ? 'error' : type === 'success' ? 'success' : ''}`.trim();
+      toast.textContent = message;
+      el.toastStack.appendChild(toast);
+
+      requestAnimationFrame(() => {
+        toast.classList.add('show');
+      });
+
+      const timeout = typeof durationMs === 'number'
+        ? durationMs
+        : (type === 'error' ? 6500 : 3500);
+      window.setTimeout(() => {
+        toast.classList.remove('show');
+        window.setTimeout(() => {
+          toast.remove();
+        }, 220);
+      }, timeout);
+    }
+
+    function escapeHtml(value) {
+      return String(value)
+        .replaceAll('&', '&amp;')
+        .replaceAll('<', '&lt;')
+        .replaceAll('>', '&gt;')
+        .replaceAll('"', '&quot;')
+        .replaceAll("'", '&#39;');
+    }
+
+    function renderFilePreview() {
+      if (!state.files.length) {
+        el.filePreview.innerHTML = '<div class="file-summary">未选择文件</div>';
+        return;
+      }
+
+      const chips = state.files.slice(0, 5)
+        .map(file => `<div class="file-chip" title="${escapeHtml(file.name)}">${escapeHtml(file.name)}</div>`)
+        .join('');
+      const more = state.files.length > 5
+        ? `<div class="file-summary">另有 ${state.files.length - 5} 个文件未展开</div>`
+        : `<div class="file-summary">共 ${state.files.length} 个文件</div>`;
+      el.filePreview.innerHTML = chips + more;
+    }
+
+    function renderCategories(categories) {
+      const keys = Object.keys(categories || {});
+      el.category.innerHTML = keys
+        .map(name => `<option value="${escapeHtml(name)}">${escapeHtml(name)} (${escapeHtml(categories[name])})</option>`)
+        .join('');
+    }
+
+    function renderAIState() {
+      const ai = state.config && state.config.ai;
+      state.aiReady = !!(ai && ai.url && ai.apiKey && ai.modelName);
+
+      if (!state.aiReady) {
+        el.useAI.checked = false;
+        el.aiHint.textContent = '未配置 AI，需手动选择分类。';
+      } else {
+        el.aiHint.textContent = '已配置 AI，可自动分类。';
+      }
+
+      el.useAI.disabled = !state.aiReady || state.isArchiving;
+      el.category.disabled = state.isArchiving || el.useAI.checked;
+    }
+
+    function renderBusyState() {
+      el.archiveBtn.disabled = state.isArchiving;
+      el.fileInput.disabled = state.isArchiving;
+      el.dropzone.setAttribute('aria-disabled', String(state.isArchiving));
+      renderAIState();
+    }
+
+    async function fetchJSON(url, options) {
+      const response = await fetch(url, options);
+      const data = await response.json();
+      if (!response.ok) {
+        throw new Error(data.error || '请求失败');
+      }
+      return data;
+    }
+
+    async function loadConfig() {
+      const data = await fetchJSON('/api/config');
+      state.config = data;
+      renderCategories(data.categories);
+      renderAIState();
+    }
+
+    function setSelectedFiles(files) {
+      state.files = Array.from(files || []);
+      renderFilePreview();
+    }
+
+    async function archiveFiles() {
+      if (state.isArchiving) return;
+      if (!state.files.length) {
+        setStatus('请先选择至少一个文件。', 'error');
+        return;
+      }
+      if (!el.useAI.checked && !el.category.value) {
+        setStatus('请选择分类，或启用 AI 自动分类。', 'error');
+        return;
+      }
+
+      const form = new FormData();
+      form.append('category', el.category.value || '');
+      form.append('useAI', el.useAI.checked ? 'true' : 'false');
+      state.files.forEach(file => form.append('file', file));
+
+      try {
+        state.isArchiving = true;
+        renderBusyState();
+        setStatus('归档处理中...');
+
+        const data = await fetchJSON('/api/archive', { method: 'POST', body: form });
+        const failed = Array.isArray(data.results)
+          ? data.results.filter(item => item.status !== 'success')
+          : [];
+
+        if (!failed.length) {
+          setStatus(data.message || '全部归档成功。', 'success');
+        } else {
+          const preview = failed.slice(0, 3)
+            .map(item => `${item.filename}: ${item.error}`)
+            .join('\n');
+          setStatus(`${data.message || '归档完成。'}\n失败 ${failed.length} 个\n${preview}`, 'error');
+        }
+      } catch (error) {
+        setStatus(error.message || '归档失败', 'error');
+      } finally {
+        state.isArchiving = false;
+        renderBusyState();
+      }
+    }
+
+    function bindEvents() {
+      el.dropzone.addEventListener('click', () => {
+        if (!state.isArchiving) el.fileInput.click();
+      });
+
+      el.dropzone.addEventListener('keydown', (event) => {
+        if (event.key === 'Enter' || event.key === ' ') {
+          event.preventDefault();
+          if (!state.isArchiving) el.fileInput.click();
+        }
+      });
+
+      el.fileInput.addEventListener('change', () => {
+        setSelectedFiles(el.fileInput.files);
+      });
+
+      el.dropzone.addEventListener('dragover', (event) => {
+        event.preventDefault();
+        if (!state.isArchiving) el.dropzone.classList.add('dragover');
+      });
+
+      el.dropzone.addEventListener('dragleave', () => {
+        el.dropzone.classList.remove('dragover');
+      });
+
+      el.dropzone.addEventListener('drop', (event) => {
+        event.preventDefault();
+        el.dropzone.classList.remove('dragover');
+        if (state.isArchiving) return;
+        if (event.dataTransfer.files && event.dataTransfer.files.length) {
+          setSelectedFiles(event.dataTransfer.files);
+        }
+      });
+
+      el.useAI.addEventListener('change', () => {
+        renderAIState();
+      });
+
+      el.archiveBtn.addEventListener('click', archiveFiles);
+    }
+
+    async function bootstrap() {
+      try {
+        renderFilePreview();
+        bindEvents();
+        await loadConfig();
+      } catch (error) {
+        setStatus(error.message || '加载失败', 'error');
+      }
+    }
+
+    bootstrap();
+  </script>
+</body>
+</html>
