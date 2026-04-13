@@ -1,9 +1,8 @@
-﻿package main
+package main
 
 import (
 	"flag"
 	"fmt"
-	"net/http"
 	"os"
 
 	"filearchiver/internal/archiver"
@@ -18,13 +17,24 @@ func main() {
 	template := flag.String("t", defaultTemplate, "文件名前缀模板（版本和扩展名会自动追加）")
 	configPath := flag.String("config", "", "配置文件路径 (默认: ./config.yaml)")
 	webMode := flag.Bool("web", false, "启动 Web 页面")
-	addr := flag.String("addr", ":8080", "Web 服务监听地址")
+	trayMode := flag.Bool("tray", false, "在托盘模式下启动 Web 页面（需 tray 构建标签）")
+	addr := flag.String("addr", ":8082", "Web 服务监听地址")
 	flag.Parse()
 
+	if len(os.Args) == 1 {
+		*webMode = true
+		*trayMode = true
+	}
+
 	if *webMode {
-		server := &webui.Server{ConfigPath: *configPath}
 		fmt.Printf("Web UI: http://localhost%s\n", *addr)
-		if err := http.ListenAndServe(*addr, server.Handler()); err != nil {
+		var err error
+		if *trayMode {
+			err = webui.RunWithTray(*addr, *configPath)
+		} else {
+			err = webui.Serve(*addr, *configPath)
+		}
+		if err != nil {
 			fmt.Fprintln(os.Stderr, err)
 			os.Exit(1)
 		}
